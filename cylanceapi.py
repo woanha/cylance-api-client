@@ -175,4 +175,4 @@ class CyApiHandler:
                 return None
 
             df_detection = pd.DataFrame(pd.io.json.json_normalize(jsonDetectionDetails))
-            print df_detection.to_csv('test.csv')
+            df_detection.to_csv('test.csv')
