@@ -6,7 +6,10 @@ import jwt # PyJWT version 1.5.3 as of the time of authoring.
 import uuid
 import requests # requests version 2.18.4 as of the time of authoring.
 import json
+import ast
 import ConfigParser
+import pandas as pd
+from io import StringIO
 from datetime import datetime, timedelta
 
 
@@ -42,6 +45,8 @@ class CyApiHandler:
 
         self.cyToken = ""      
 
+    
+    #TODO Authenticate only after timeout or if call fails
     def Authenticate(self):
          # 30 minutes from now
         timeout = 1800
@@ -71,12 +76,14 @@ class CyApiHandler:
         self.cyToken = json.loads(response.text)['access_token']
         print self.cyToken
 
-    #MANDATORY  start:     datetime    e.g.: 2019-07-22T09:09:30Z (ISO Format)
-    #MANDATORY  end:       datetime    e.g.: 2019-07-24T18:00:00Z (ISO Format)
-    #OPTIONAL   severity:  string      Informational, Low, Medium, High (Case Sensitive)
-    #OPTIONAL   device:    string      e.g.: 2217PC70596
-    #OPTIONAL   status:    string      New, In Progress, Follow Up, Reviewed, Done, False Positive (Case Sensitive)
-    def GetDetectionsCSVList(self, start, end, severity = None, device = None, status = None):
+    #RETURNS PANDAS DATAFRAME
+    #MANDATORY  start:          datetime    e.g.: 2019-07-22T09:09:30Z (ISO Format)
+    #MANDATORY  end:            datetime    e.g.: 2019-07-24T18:00:00Z (ISO Format)
+    #OPTIONAL   detectionType:  string      Name of detection, e.g. Internet Browser With Suspicious Parent
+    #OPTIONAL   severity:       string      Informational, Low, Medium, High (Case Sensitive)
+    #OPTIONAL   device:         string      e.g.: 2217PC70596
+    #OPTIONAL   status:         string      New, In Progress, Follow Up, Reviewed, Done, False Positive (Case Sensitive)
+    def GetDetectionsCSVList(self, start, end, detectionType = None, severity = None, device = None, status = None):
         #Mandatory Parameter Checks
         if not (start and end):
             raise ValueError("Invalid start and/or end datetime")
@@ -86,10 +93,7 @@ class CyApiHandler:
             raise ValueError("Invalid severity option")
         if status and status not in OPTIONS_STATUS:
             raise ValueError("Invalid status option") 
-        
-        #Authentication
-        #TODO Authenticate only after timeout or if call fails
-        
+
         try:
             self.Authenticate()
         except Exception as error:
@@ -103,6 +107,8 @@ class CyApiHandler:
             payload["severity"] = severity
         if status:
             payload["status"] = status
+        if detectionType:
+            payload["detection_type"] = detectionType
         if device:
             payload["device"] = device
 
@@ -112,4 +118,61 @@ class CyApiHandler:
         if(int(response.status_code) != 200):
             raise ValueError("Invalid request", str(response.content))
         
-        return str(response.content)
+        df = pd.read_csv(StringIO(response.content.decode('unicode-escape')), sep = ",")
+        return df
+
+
+    def getDetection(self, eventID):
+        if not eventID or eventID == "":
+            raise ValueError("Invalid detection ID")
+
+        try:
+            self.Authenticate()
+        except Exception as error:
+            raise IOError("Authentication Fail:", error)
+
+        authHeaderString = "Bearer " + self.cyToken
+        headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json", "Authorization": authHeaderString}
+        url = DETECTIONS_URL + "/" + eventID + "/details"
+
+        response = requests.get(url, headers=headers)
+
+        if(int(response.status_code) != 200):
+            raise ValueError("Invalid request", str(response.content))
+        
+        return response.json()
+
+
+    #RETURNS PANDAS DATAFRAME
+    #MANDATORY  df_detecionslist:   pandas.DataFrame    Output from GetDetectionsCSVList
+    def getDetectionDetails(self, df_detecionslist):
+        errorCount = 0;
+
+        if not isinstance(df_detecionslist, pd.DataFrame):
+            raise ValueError("Parameter is not of type pd.Dataframe")
+        
+        try:
+            self.Authenticate()
+        except Exception as error:
+            raise IOError("Authentication Fail:", error)
+
+        for index, row in df_detecionslist.iterrows():
+            detectionID = row['Id']
+
+            try:
+                jsonDetectionDetails = self.getDetection(detectionID)
+            except ValueError as vError:
+                errorCount += 1
+                print vError
+                if errorCount > 5:
+                    print "reached limit of maximum errors: " + str(errorCount)
+                    print "aborting ..."
+                    return None
+                print "continue getting detection details ..."
+            except IOError as ioError:
+                print ioError
+                print "getting detection details failed"
+                return None
+
+            df_detection = pd.DataFrame(pd.io.json.json_normalize(jsonDetectionDetails))
+            print df_detection.to_csv('test.csv')

@@ -1,0 +1,4 @@
+[AUTHENTICATION]
+tid_val = e3a3738f-e186-4ddf-b820-5d7f92493138
+app_id = 98dfba71-511f-4613-8c2a-487a7a36da92
+app_secret = 44db7225-9b96-4b19-a3fd-3c6ed73f15cf
