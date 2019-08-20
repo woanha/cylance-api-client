@@ -43,7 +43,13 @@ class CyApiHandler:
             self.appID = appID
             self.appSecret = appSecret
 
-        self.cyToken = ""      
+        self.cyToken = ""     
+        
+    def Csv2DataFrame(self, csv):
+        if not csv:
+            return None
+        df = pd.read_csv(StringIO(csv.decode('unicode-escape')), sep = ",")
+        return df
 
     
     #TODO Authenticate only after timeout or if call fails
@@ -118,8 +124,8 @@ class CyApiHandler:
         if(int(response.status_code) != 200):
             raise ValueError("Invalid request", str(response.content))
         
-        df = pd.read_csv(StringIO(response.content.decode('unicode-escape')), sep = ",")
-        return df
+        #df = pd.read_csv(StringIO(response.content.decode('unicode-escape')), sep = ",")
+        return response.content
 
 
     def getDetection(self, eventID):
@@ -143,9 +149,31 @@ class CyApiHandler:
         return response.json()
 
 
-    #RETURNS PANDAS DATAFRAME
+        
+    def deleteDetection(self, eventID):
+        if not eventID or eventID == "":
+            raise ValueError("Invalid detection ID")
+
+        try:
+            self.Authenticate()
+        except Exception as error:
+            raise IOError("Authentication Fail:", error)
+
+        authHeaderString = "Bearer " + self.cyToken
+        headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json", "Authorization": authHeaderString}
+
+        url = DETECTIONS_URL + "/" + eventID
+
+        response = requests.delete(url, headers=headers)
+
+        if(int(response.status_code) != 200):
+            raise ValueError("Invalid request", str(response.content))
+        
+        return response.json()
+
     #MANDATORY  df_detecionslist:   pandas.DataFrame    Output from GetDetectionsCSVList
-    def getDetectionDetails(self, df_detecionslist):
+    #TODO: Optional parameters for conditions, like commandline etc
+    def getDetectionDetails(self, df_detecionslist, commandline = None, user = None, device = None):
         errorCount = 0;
 
         if not isinstance(df_detecionslist, pd.DataFrame):
