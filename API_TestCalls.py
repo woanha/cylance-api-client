@@ -5,21 +5,10 @@ from datetime import datetime, timedelta
 from cylanceapi import CyApiHandler
 import windpapi
 
-#TEST WINDPAPI#####################
-testciphertext = windpapi.encryptData("TestString1")
-testciphertext.decode('unicode_escape').encode('utf-8')
-#print testciphertext
-
-#
-plaintext = windpapi.decryptData(testciphertext)
-#print plaintext
-###################################
-
 Cylance = CyApiHandler()
-Cylance.SetConsole(ConsoleId = "ApiTests", ApiId = "98dfba71-511f-4613-8c2a-487a7a36da92", ApiTenantId = "e3a3738f-e186-4ddf-b820-5d7f92493138", ApiSecret = "44db7225-9b96-4b19-a3fd-3c6ed73f15cf", RegionCode = "euc1")
+#Cylance.SetConsole(ConsoleId = "ApiTests", ApiId = "98dfba71-511f-4613-8c2a-487a7a36da92", ApiTenantId = "e3a3738f-e186-4ddf-b820-5d7f92493138", ApiSecret = "44db7225-9b96-4b19-a3fd-3c6ed73f15cf", RegionCode = "euc1")
 
 Cylance.GetConsole(ConsoleId = "ApiTests")
-#Cylance.WriteConsoleConfig("a", "b", "c", "d", "e")
 
 now = datetime.utcnow()
 startDate = now - timedelta(hours=6)
@@ -27,6 +16,13 @@ startDate = now - timedelta(hours=6)
 csv_detections = Cylance.GetDetectionsCSVList(startDate.strftime('%Y-%m-%dT%H:%M:%SZ'), now.strftime('%Y-%m-%dT%H:%M:%SZ'))#, detectionType="Internet Browser With Suspicious Parent")
 df_detections = Cylance.Csv2DataFrame(csv_detections)
 print df_detections
+
+jsonDetections = Cylance.GetDetections(detectionType="Suspicious OS Process Owner",start = (now-timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ') )
+with open('data.json', 'w') as f:
+    json.dump(jsonDetections, f)
+
+for item in jsonDetections["page_item"]:
+    item["Device"]["Name"]
 
 #Cylance.GetDetections(start = startDate.strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'))
 

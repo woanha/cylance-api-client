@@ -104,7 +104,7 @@ class CyApiHandler:
                 'ConsoleId': ConsoleId,
                 'ApiId': ApiId,
                 'ApiTenantId': ApiTenantId,
-                'ApiSecret': EncryptedApiSecret,#.decode('unicode_escape').encode('utf-8'),
+                'ApiSecret': EncryptedApiSecret,
                 'ApiUrl': ApiUrl
             })
         elif jsonConsoleConfig: #json file found -> prevent duplicates
@@ -123,7 +123,7 @@ class CyApiHandler:
                 'ConsoleId': ConsoleId,
                 'ApiId': ApiId,
                 'ApiTenantId': ApiTenantId,
-                'ApiSecret': EncryptedApiSecret,#.decode('unicode_escape').encode('utf-8'),
+                'ApiSecret': EncryptedApiSecret,
                 'ApiUrl': ApiUrl
             })
         else: #file found but no json (empty?) -> something went wrong
@@ -179,13 +179,6 @@ class CyApiHandler:
         except KeyError:
             print "Json keys not found -> malformed CyApiConsoles.json?!"
             return successState
-        
-
-        #TESTS
-        #test1 = self.appSecret.decode('utf-8')
-
-        #self.appSecret = self.appSecret.encode('unicode_escape')#.decode('utf-8')
-        #self.appSecret = self.appSecret.decode('utf-8')
 
         #Decrypt ApiSecret
         try:
@@ -260,36 +253,72 @@ class CyApiHandler:
     def GetDetections(self, last = None, start = None, end = None, severity = None, detectionType = None, eventNumber = None, device = None, status = None, sort = None):
         #Check input params and generate payload
         #return if no params passed
-        paramCount = 0
         pageSize = 200
         payload = {}
-
-        if start:
-            payload["start"] = start
-            paramCount += 1
-        if end:
-            payload["end"] = end
-            paramCount += 1
-        if severity:
-            payload["severity"] = severity
-            paramCount += 1
-        if detectionType:
-            payload["detectionType"] = detectionType
-            paramCount += 1
-        if eventNumber:
-            payload["eventNumber"] = eventNumber
-            paramCount += 1
+        jsonContent = None
+        numPages = 0
+        requestUrlParams = ""
         
 
-        if paramCount == 0:
-            raise ValueError("No parameters passed")
+        if start:
+            requestUrlParams = requestUrlParams + "&start=" + start
+        if end:
+            requestUrlParams = requestUrlParams + "&end=" + end
+        if severity:
+            requestUrlParams = requestUrlParams + "&severity=" + severity
+        #TODO: continue with this method (request params ...)
+        if detectionType:
+            payload["detectionType"] = detectionType
+        if eventNumber:
+            payload["eventNumber"] = eventNumber
+        if device:
+            payload["device"] = device
+        if status:
+            payload["status"] = status
+        if sort:
+            payload["sort"] = status
+
 
         try:
             self.Authenticate()
         except Exception as error:
             raise IOError("Authentication Fail:", error)
         
-        return None
+        authHeaderString = "Bearer " + self.cyToken
+        headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json", "Authorization": authHeaderString}
+
+        url = DETECTIONS_URL + "?page=1&page_size=" + str(pageSize) + "&detection_type=" + detectionType
+        response = requests.get(url, headers=headers, params=payload)
+
+        if(int(response.status_code) != 200):
+            raise ValueError("Invalid request", str(response.content))
+
+        #Extract the first page and total page number
+        try:
+            jsonContent = response.json()
+            numPages = jsonContent["total_pages"]
+        except ValueError as vError:
+            print vError
+            return None
+
+        #Extract the remaining sites, if any
+        if numPages < 2: return jsonContent
+
+        for i in xrange(2, numPages + 1):
+            url = DETECTIONS_URL + "?page=" + str(i) + "&page_size=" + str(pageSize) + "&detection_type=" + detectionType
+            response = requests.get(url, headers=headers, params=payload)
+
+            if(int(response.status_code) != 200):
+                raise ValueError("Invalid request", str(response.content))
+                
+            try:
+                tempContent = response.json()
+                jsonContent["page_items"].extend(tempContent["page_items"])
+            except ValueError as vError:
+                print "Error occured during detection retrieval: RESULT INCOMPLETE!"
+                break
+
+        return jsonContent
     
 
     #RETURNS CSV
@@ -337,7 +366,7 @@ class CyApiHandler:
         return response.content
 
 
-    def getDetection(self, eventID):
+    def GetDetection(self, eventID):
         if not eventID or eventID == "":
             raise ValueError("Invalid detection ID")
 
@@ -359,7 +388,7 @@ class CyApiHandler:
 
 
         
-    def deleteDetection(self, eventID):
+    def DeleteDetection(self, eventID):
         if not eventID or eventID == "":
             raise ValueError("Invalid detection ID")
 
@@ -382,7 +411,7 @@ class CyApiHandler:
 
     #MANDATORY  df_detecionslist:   pandas.DataFrame    Output from GetDetectionsCSVList
     #TODO: Optional parameters for conditions, like commandline etc
-    def getDetectionDetails(self, df_detecionslist, commandline = None, user = None, device = None):
+    def GetDetectionDetails(self, df_detecionslist, commandline = None, user = None, device = None):
         errorCount = 0
 
         if not isinstance(df_detecionslist, pd.DataFrame):
