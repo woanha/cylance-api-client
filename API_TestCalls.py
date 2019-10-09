@@ -3,7 +3,6 @@ import time
 import pandas as pd
 from datetime import datetime, timedelta
 from cylanceapi import CyApiHandler
-import windpapi
 
 Cylance = CyApiHandler()
 #Cylance.SetConsole(ConsoleId = "ApiTests", ApiId = "98dfba71-511f-4613-8c2a-487a7a36da92", ApiTenantId = "e3a3738f-e186-4ddf-b820-5d7f92493138", ApiSecret = "44db7225-9b96-4b19-a3fd-3c6ed73f15cf", RegionCode = "euc1")
@@ -17,13 +16,25 @@ csv_detections = Cylance.GetDetectionsCSVList(startDate.strftime('%Y-%m-%dT%H:%M
 df_detections = Cylance.Csv2DataFrame(csv_detections)
 print df_detections
 
-jsonDetections = Cylance.GetDetections(detectionType="Suspicious OS Process Owner",start = (now-timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ') )
-with open('data.json', 'w') as f:
+#detectionType="Suspicious OS Process Owner"
+jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType="Suspicious OS Process Owner" )
+
+with open("data.json", "w") as f:
     json.dump(jsonDetections, f)
 
-for item in jsonDetections["page_item"]:
-    item["Device"]["Name"]
+####-----------------------------------------------------------------------------------------
+#potential_prod_devices = set()
+#for item in jsonDetections["page_items"]:
+#    potential_prod_devices.add(item["Device"]["Name"])
 
+#with open('potential_prod_hosts.txt', 'w') as f:
+#    for val in potential_prod_devices:
+#        f.write(val + "\n")
+####-----------------------------------------------------------------------------------------
+
+
+#print "Number of hosts: "  + str(len(potential_prod_devices))
+#print potential_prod_devices
 #Cylance.GetDetections(start = startDate.strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'))
 
 #result = Cylance.deleteDetection("b42906b0-ae1f-45d9-9f55-4b919b90504c")

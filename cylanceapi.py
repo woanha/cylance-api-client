@@ -14,6 +14,7 @@ import pandas as pd
 from io import StringIO
 from datetime import datetime, timedelta
 from os.path import expanduser
+from requests import exceptions
 
 
 #STATIC VARIABLES
@@ -266,17 +267,16 @@ class CyApiHandler:
             requestUrlParams = requestUrlParams + "&end=" + end
         if severity:
             requestUrlParams = requestUrlParams + "&severity=" + severity
-        #TODO: continue with this method (request params ...)
         if detectionType:
-            payload["detectionType"] = detectionType
+            requestUrlParams = requestUrlParams + "&detection_type=" + detectionType
         if eventNumber:
-            payload["eventNumber"] = eventNumber
+            requestUrlParams = requestUrlParams + "&event_number=" + eventNumber
         if device:
-            payload["device"] = device
+            requestUrlParams = requestUrlParams + "&device=" + device
         if status:
-            payload["status"] = status
+            requestUrlParams = requestUrlParams + "&status=" + status
         if sort:
-            payload["sort"] = status
+            requestUrlParams = requestUrlParams + "&sort=" + sort
 
 
         try:
@@ -287,11 +287,23 @@ class CyApiHandler:
         authHeaderString = "Bearer " + self.cyToken
         headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json", "Authorization": authHeaderString}
 
-        url = DETECTIONS_URL + "?page=1&page_size=" + str(pageSize) + "&detection_type=" + detectionType
-        response = requests.get(url, headers=headers, params=payload)
+        url = DETECTIONS_URL + "?page=1&page_size=" + str(pageSize) + requestUrlParams
 
-        if(int(response.status_code) != 200):
-            raise ValueError("Invalid request", str(response.content))
+        try:
+            response = requests.get(url, headers=headers, params=payload)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as errh:
+            print ("HTTP Error:",errh)
+            return jsonContent;
+        except requests.exceptions.ConnectionError as errc:
+            print ("Error Connecting:",errc)
+            return jsonContent;
+        except requests.exceptions.Timeout as errt:
+            print ("Timeout Error:",errt)
+            return jsonContent;
+        except requests.exceptions.RequestException as err:
+            print ("Request Error",err)
+            return jsonContent;
 
         #Extract the first page and total page number
         try:
@@ -301,15 +313,35 @@ class CyApiHandler:
             print vError
             return None
 
+        #Remove obsolete elements
+        try:
+            del jsonContent["total_pages"]
+            del jsonContent["page_size"]
+            del jsonContent["page_number"]
+        except ValueError:
+            print "Could not remove obsolete elements -> malformed JSON?!?!"
+
         #Extract the remaining sites, if any
         if numPages < 2: return jsonContent
 
         for i in xrange(2, numPages + 1):
-            url = DETECTIONS_URL + "?page=" + str(i) + "&page_size=" + str(pageSize) + "&detection_type=" + detectionType
-            response = requests.get(url, headers=headers, params=payload)
-
-            if(int(response.status_code) != 200):
-                raise ValueError("Invalid request", str(response.content))
+            url = DETECTIONS_URL + "?page=" + str(i) + "&page_size=" + str(pageSize) + requestUrlParams
+            
+            try:
+                response = requests.get(url, headers=headers, params=payload)
+                response.raise_for_status()
+            except HTTPError as errh:
+                print ("HTTP Error:",errh)
+                return jsonContent;
+            except ConnectionError as errc:
+                print ("Error Connecting:",errc)
+                return jsonContent;
+            except Timeout as errt:
+                print ("Timeout Error:",errt)
+                return jsonContent;
+            except RequestException as err:
+                print ("Request Error",err)
+                return jsonContent;
                 
             try:
                 tempContent = response.json()
