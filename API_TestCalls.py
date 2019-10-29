@@ -2,25 +2,46 @@ import json
 import time
 import pandas as pd
 from datetime import datetime, timedelta
-from cylanceapi import CyApiHandler
+from Cylance import CyApiHandler
+#import windpapi
 
-Cylance = CyApiHandler()
-#Cylance.SetConsole(ConsoleId = "ApiTests", ApiId = "98dfba71-511f-4613-8c2a-487a7a36da92", ApiTenantId = "e3a3738f-e186-4ddf-b820-5d7f92493138", ApiSecret = "44db7225-9b96-4b19-a3fd-3c6ed73f15cf", RegionCode = "euc1")
+
+####-TEST WINDPAPI------------------------------------------------------------------------------------
+#testPlainText = '''TESTSTRING'''
+#testCipherText = ''''''
+#testOutput = ''''''
+#
+#testCipherText = windpapi.encryptData(testPlainText.encode("utf-8"))
+#testOutput = windpapi.decryptData(testCipherText)
+#print(type(testOutput))
+####-----------------------------------------------------------------------------------------------
+
+Cylance = CyApiHandler.CyApiHandler()
+Cylance.SetConsole(ConsoleId = "ApiTests", ApiId = "98dfba71-511f-4613-8c2a-487a7a36da92", ApiTenantId = "e3a3738f-e186-4ddf-b820-5d7f92493138", ApiSecret = "44db7225-9b96-4b19-a3fd-3c6ed73f15cf", RegionCode = "euc1")
 
 Cylance.GetConsole(ConsoleId = "ApiTests")
 
+####-TEST GetDetectionsCSVList()------------------------------------------------------------------------
 now = datetime.utcnow()
 startDate = now - timedelta(hours=6)
-
 csv_detections = Cylance.GetDetectionsCSVList(startDate.strftime('%Y-%m-%dT%H:%M:%SZ'), now.strftime('%Y-%m-%dT%H:%M:%SZ'))#, detectionType="Internet Browser With Suspicious Parent")
 df_detections = Cylance.Csv2DataFrame(csv_detections)
-print df_detections
+print (df_detections)
+####----------------------------------------------------------------------------------------------------
 
+####-TEST GetDetectionRuleSetList()-----------------------------------------------------------------------
+jsonRuleSetList = Cylance.GetDetectionRuleSetList(description = None, last_modified = None, modified_by_id = None, modified_by_login = None, device_count = None, sort = None)
+with open("rulesetlist.json", "w") as f:
+    json.dump(jsonRuleSetList, f)
+
+####-TEST GetDetections()---------------------------------------------------------------------------------
 #detectionType="Suspicious OS Process Owner"
-jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType="Suspicious OS Process Owner" )
+#jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=7)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType="Suspicious OS Process Owner" )
 
-with open("data.json", "w") as f:
-    json.dump(jsonDetections, f)
+#with open("data.json", "w") as f:
+#    json.dump(jsonDetections, f)
+####-------------------------------------------------------------------------------------------------------
+
 
 ####-----------------------------------------------------------------------------------------
 #potential_prod_devices = set()
