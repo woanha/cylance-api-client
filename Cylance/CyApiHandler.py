@@ -580,6 +580,7 @@ class CyApiHandler:
 
     def GetDetectionRuleSet(self,rulesetId):
         jsonContent = None
+        
         try:
             self.Authenticate()
         except Exception as error:

@@ -31,8 +31,19 @@ print (df_detections)
 
 ####-TEST GetDetectionRuleSetList()-----------------------------------------------------------------------
 jsonRuleSetList = Cylance.GetDetectionRuleSetList(description = None, last_modified = None, modified_by_id = None, modified_by_login = None, device_count = None, sort = None)
-with open("rulesetlist.json", "w") as f:
-    json.dump(jsonRuleSetList, f)
+
+if (not jsonRuleSetList): exit()
+
+for item in jsonRuleSetList['page_items']:
+    id = item['id']
+    jsonRuleSet = Cylance.GetDetectionRuleSet(rulesetId = id)
+    filename = jsonRuleSet['name'].replace('/', '_') + '.json'
+    with open(filename, 'w') as jsonFile:
+        json.dump(jsonRuleSet, jsonFile)
+
+
+#with open("rulesetlist.json", "w") as f:
+#    json.dump(jsonRuleSetList, f)    
 
 ####-TEST GetDetections()---------------------------------------------------------------------------------
 #detectionType="Suspicious OS Process Owner"
