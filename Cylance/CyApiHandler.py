@@ -18,10 +18,11 @@ from os.path import expanduser
 from requests import exceptions
 
 #STATIC VARIABLES
+#TODO ADAPT TO INFORMATION IN MEMBERS -> JUST ENDPOINTS
 CONSOLECONFIG = '''CyApiConsoles.json'''
 AUTH_URL = "https://protectapi-euc1.cylance.com/auth/v2/token"
 DETECTIONS_URL = "https://protectapi-euc1.cylance.com/detections/v2"
-RULESETS_URL = "https://protectapi.cylance.com/rulesets/v2"
+RULESETS_URL = "https://protectapi-euc1.cylance.com/rulesets/v2"
 POLICIES_URL = "https://protectapi-euc1.cylance.com/policies/v2"
 OPTIONS_SEVERETY = ['Informational', 'Low', 'Medium', 'High']
 OPTIONS_STATUS = ['New', 'In Progress', 'Follow Up', 'Reviewed', 'Done', 'False Positive']
