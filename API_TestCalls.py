@@ -93,9 +93,9 @@ with open(now.strftime('%Y%m%d%H%M%S')+'cert_issue_hosts.txt', 'w') as f:
       f.write(line + '\n')
 
 for val in cert_issue_devices:
-   deviceUpdated = Cylance.UpdateDevice(deviceName = val[0], deviceUID = val[0], policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
+   deviceUpdated = Cylance.UpdateDevice(deviceName = val[0], deviceUID = val[1], policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
    if not deviceUpdated:
-      print (val[0] + "not updated")
+      print (val[0] + " not updated")
 
    #Cylance.UpdateDevice(deviceName = "2126PC63383", deviceUID = "f188b93f-7b24-4e56-b069-59bc0d7642d3", policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
 ####-----------------------------------------------------------------------------------------
