@@ -22,6 +22,7 @@ from requests import exceptions
 CONSOLECONFIG = '''CyApiConsoles.json'''
 AUTH_URL = "https://protectapi-euc1.cylance.com/auth/v2/token"
 DETECTIONS_URL = "https://protectapi-euc1.cylance.com/detections/v2"
+DEVICES_URL = "https://protectapi-euc1.cylance.com/devices/v2"
 RULESETS_URL = "https://protectapi-euc1.cylance.com/rulesets/v2"
 POLICIES_URL = "https://protectapi-euc1.cylance.com/policies/v2"
 OPTIONS_SEVERETY = ['Informational', 'Low', 'Medium', 'High']
@@ -614,6 +615,52 @@ class CyApiHandler:
             return None
 
         return jsonContent
+
+    def UpdateDevice(self, deviceUID, deviceName, policyId = None, addZoneIds = None, removeZoneIds = None):
+        putSuccess = False
+        enoughParams = False
+        response = None
+        payload = {}
+
+        if (deviceName == None or deviceName == ""):
+            raise ValueError("Device Name cannot be empty")
+        
+        payload["name"] = deviceName
+
+        if policyId:
+            payload["policy_id"] = policyId
+            enoughParams = True
+        if addZoneIds:
+            payload["add_zone_ids"] = addZoneIds
+            enoughParams = True
+        if removeZoneIds:
+            payload["remove_zone_ids"] = removeZoneIds
+            enoughParams = True
+
+        if not enoughParams:
+            print("No parameters to update ... doing nothing")
+            return
+
+
+        try:
+            self.Authenticate()
+        except Exception as error:
+            raise IOError("Authentication Fail:", error)
+        
+        authHeaderString = "Bearer " + self.cyToken
+        headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json", "Authorization": authHeaderString}
+
+        url = DEVICES_URL + "/" + deviceUID
+
+        try:
+            response = requests.put(url, headers=headers, data=json.dumps(payload))
+        except requests.exceptions.RequestException as error:
+            print(error)
+
+        if(int(response.status_code) == 200):
+            putSuccess = True
+
+        return putSuccess
     
     
     def CopyDetectionExceptions(self, destRuleSet, srcRuleSet, detectionRule):
