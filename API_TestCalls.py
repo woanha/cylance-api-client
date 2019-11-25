@@ -6,6 +6,20 @@ from Cylance import CyApiHandler
 #import windpapi
 
 
+Cylance = CyApiHandler.CyApiHandler()
+
+####-TEST GET AND SET CONSOLE ---------------------------------------------------------------------
+#Cylance.SetConsole(ConsoleId = "ApiTests", ApiId = "98dfba71-511f-4613-8c2a-487a7a36da92", ApiTenantId = "e3a3738f-e186-4ddf-b820-5d7f92493138", ApiSecret = "<Secret>", RegionCode = "euc1")
+Cylance.GetConsole(ConsoleId = "ApiTests")
+####-----------------------------------------------------------------------------------------------
+
+
+####-TEST AUTHENTICATE AND PRINT TOKEN ------------------------------------------------------------
+Cylance.Authenticate()
+print(Cylance.cyToken)
+####-----------------------------------------------------------------------------------------------
+
+
 ####-TEST WINDPAPI------------------------------------------------------------------------------------
 #testPlainText = '''TESTSTRING'''
 #testCipherText = ''''''
@@ -16,10 +30,6 @@ from Cylance import CyApiHandler
 #print(type(testOutput))
 ####-----------------------------------------------------------------------------------------------
 
-Cylance = CyApiHandler.CyApiHandler()
-#Cylance.SetConsole(ConsoleId = "ApiTests", ApiId = "98dfba71-511f-4613-8c2a-487a7a36da92", ApiTenantId = "e3a3738f-e186-4ddf-b820-5d7f92493138", ApiSecret = "44db7225-9b96-4b19-a3fd-3c6ed73f15cf", RegionCode = "euc1")
-
-Cylance.GetConsole(ConsoleId = "ApiTests")
 
 ####-TEST GetDetectionsCSVList()------------------------------------------------------------------------
 now = datetime.utcnow()
@@ -52,7 +62,7 @@ print (df_detections)
 
 ####-TEST GetDetections()---------------------------------------------------------------------------------
 detectionType="Suspicious OS Process Owner"
-jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=5)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType="Suspicious OS Process Owner" )
+jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=5)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType="Suspicious OS Process Owner (languages added)" )
 
 with open("data.json", "w") as f:
    json.dump(jsonDetections, f)
@@ -63,8 +73,14 @@ with open("data.json", "w") as f:
 cert_issue_devices = set()
 instProcUid = ""
 instImageUid = ""
+countErrors = 0
 for item in jsonDetections["page_items"]:
-   detectionDetails = Cylance.GetDetection(eventID = item["Id"])
+   try:
+      detectionDetails = Cylance.GetDetection(eventID = item["Id"])
+   except ValueError as error:
+      countError += 1
+      continue
+
    AOI = detectionDetails["ArtifactsOfInterest"]
    for artifact, value in AOI.items():
       for element in value:
@@ -96,6 +112,8 @@ for val in cert_issue_devices:
    deviceUpdated = Cylance.UpdateDevice(deviceName = val[0], deviceUID = val[1], policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
    if not deviceUpdated:
       print (val[0] + " not updated")
+
+print(str(countErrors) + " Errors occured when invoking GetDetection()")
 
    #Cylance.UpdateDevice(deviceName = "2126PC63383", deviceUID = "f188b93f-7b24-4e56-b069-59bc0d7642d3", policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
 ####-----------------------------------------------------------------------------------------

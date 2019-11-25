@@ -237,7 +237,7 @@ class CyApiHandler:
         headers = {"Content-Type": "application/json; charset=utf-8"}
         response = requests.post(AUTH_URL, headers=headers, data=json.dumps(payload))
         self.cyToken = json.loads(response.text)['access_token']
-        print (self.cyToken)
+        
 
 
     #RETURNS JSON
