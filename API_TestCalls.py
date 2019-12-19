@@ -61,7 +61,7 @@ with open("rulesetlist.json", "w") as f:
    json.dump(jsonRuleSetList, f)    
 
 ####-TEST GetDetections()---------------------------------------------------------------------------------
-detectionType="SVCHost Suspicious Parent"
+detectionType="Process Without Common Executable Extension (Allowed: exe, tmp, dll, bin)"
 jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=5)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType=detectionType )
 
 #with open("data.json", "w") as f:
@@ -85,7 +85,7 @@ for item in jsonDetections["page_items"]:
    AOI = detectionDetails["ArtifactsOfInterest"]
    for artifact, value in AOI.items():
       for element in value:
-         if element['Source'] == 'Instigating Process':
+         if element['Source'] == 'Target Process':
             instProcUid = element['Artifact']['Uid']
             break
 
