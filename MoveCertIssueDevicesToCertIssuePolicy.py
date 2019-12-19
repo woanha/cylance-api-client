@@ -16,7 +16,7 @@ Cylance.GetConsole(ConsoleId = "ApiTests")
 
 ####-TEST AUTHENTICATE AND PRINT TOKEN ------------------------------------------------------------
 Cylance.Authenticate()
-print(Cylance.cyToken)
+#print(Cylance.cyToken)
 ####-----------------------------------------------------------------------------------------------
 
 
@@ -34,9 +34,9 @@ print(Cylance.cyToken)
 ####-TEST GetDetectionsCSVList()------------------------------------------------------------------------
 now = datetime.utcnow()
 startDate = now - timedelta(hours=6)
-csv_detections = Cylance.GetDetectionsCSVList(startDate.strftime('%Y-%m-%dT%H:%M:%SZ'), now.strftime('%Y-%m-%dT%H:%M:%SZ'))#, detectionType="Internet Browser With Suspicious Parent")
-df_detections = Cylance.Csv2DataFrame(csv_detections)
-print (df_detections)
+#csv_detections = Cylance.GetDetectionsCSVList(startDate.strftime('%Y-%m-%dT%H:%M:%SZ'), now.strftime('%Y-%m-%dT%H:%M:%SZ'))#, detectionType="Internet Browser With Suspicious Parent")
+#df_detections = Cylance.Csv2DataFrame(csv_detections)
+#print (df_detections)
 ####----------------------------------------------------------------------------------------------------
 
 ####-TEST UpdateDevice()-----------------------------------------------------------------------
@@ -61,15 +61,15 @@ with open("rulesetlist.json", "w") as f:
    json.dump(jsonRuleSetList, f)    
 
 ####-TEST GetDetections()---------------------------------------------------------------------------------
-detectionType="SVCHost Suspicious Parent"
-jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=5)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType=detectionType )
+detectionType="Suspicious OS Process Owner"
+jsonDetections = Cylance.GetDetections(start = (now-timedelta(days=5)).strftime('%Y-%m-%dT%H:%M:%SZ'), end = now.strftime('%Y-%m-%dT%H:%M:%SZ'), severity=None, status=None, sort=None, detectionType="Suspicious OS Process Owner (languages added)" )
 
-#with open("data.json", "w") as f:
-#   json.dump(jsonDetections, f)
+with open("data.json", "w") as f:
+   json.dump(jsonDetections, f)
 ####-------------------------------------------------------------------------------------------------------
 
 
-####-Get Instigating Processes from detections --------------------------------------------------------------------
+####-Create list of hosts with potential certificate issue--------------------------------------------------------------------
 cert_issue_devices = set()
 instProcUid = ""
 instImageUid = ""
@@ -81,7 +81,6 @@ for item in jsonDetections["page_items"]:
       countError += 1
       continue
 
-   eventID = detectionDetails['Id']
    AOI = detectionDetails["ArtifactsOfInterest"]
    for artifact, value in AOI.items():
       for element in value:
@@ -93,80 +92,29 @@ for item in jsonDetections["page_items"]:
    associatedArtifacts = detectionDetails["AssociatedArtifacts"]
    for artifact in associatedArtifacts:
       if artifact["Uid"] == instProcUid:
-         print(eventID + "," + artifact["Name"])
+         instImageUid = artifact["PrimaryImage"]["Uid"]
          break
    
-   # for artifact in associatedArtifacts:
-   #    if artifact["Uid"] == instImageUid:
-   #       fileSignatureJson = json.loads(artifact["FileSignatureJson"])
-   #       signatureStatus = fileSignatureJson["SignatureStatus"]
-   #       if signatureStatus == "IssuerSignatureMissing":
-   #          cert_issue_devices.add((item["Device"]["Name"],item["Device"]["CylanceId"]))
-   #          break;
+   for artifact in associatedArtifacts:
+      if artifact["Uid"] == instImageUid:
+         fileSignatureJson = json.loads(artifact["FileSignatureJson"])
+         signatureStatus = fileSignatureJson["SignatureStatus"]
+         if signatureStatus == "IssuerSignatureMissing":
+            cert_issue_devices.add((item["Device"]["Name"],item["Device"]["CylanceId"]))
+            break;
 
-# with open(now.strftime('%Y%m%d%H%M%S')+'cert_issue_hosts.txt', 'w') as f:
-#    for val in cert_issue_devices:
-#       line = ','.join(str(x) for x in val)
-#       f.write(line + '\n')
+with open(now.strftime('%Y%m%d%H%M%S')+'cert_issue_hosts.txt', 'w') as f:
+   for val in cert_issue_devices:
+      line = ','.join(str(x) for x in val)
+      f.write(line + '\n')
 
-# for val in cert_issue_devices:
-#    print ("Applying new policy to device: " + val[0])
-#    deviceUpdated = Cylance.UpdateDevice(deviceName = val[0], deviceUID = val[1], policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
-#    if not deviceUpdated:
-#       print (val[0] + " not updated")
+for val in cert_issue_devices:
+   print ("Applying new policy to device: " + val[0])
+   deviceUpdated = Cylance.UpdateDevice(deviceName = val[0], deviceUID = val[1], policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
+   if not deviceUpdated:
+      print (val[0] + " not updated")
 
-# print(str(countErrors) + " Errors occured when invoking GetDetection()")
-
-
-
-####-Create list of hosts with potential certificate issue--------------------------------------------------------------------
-# cert_issue_devices = set()
-# instProcUid = ""
-# instImageUid = ""
-# countErrors = 0
-# for item in jsonDetections["page_items"]:
-#    try:
-#       detectionDetails = Cylance.GetDetection(eventID = item["Id"])
-#    except ValueError as error:
-#       countError += 1
-#       continue
-
-#    AOI = detectionDetails["ArtifactsOfInterest"]
-#    for artifact, value in AOI.items():
-#       for element in value:
-#          if element['Source'] == 'Instigating Process':
-#             instProcUid = element['Artifact']['Uid']
-#             break
-
-   
-#    associatedArtifacts = detectionDetails["AssociatedArtifacts"]
-#    for artifact in associatedArtifacts:
-#       if artifact["Uid"] == instProcUid:
-#          instImageUid = artifact["PrimaryImage"]["Uid"]
-#          break
-   
-#    for artifact in associatedArtifacts:
-#       if artifact["Uid"] == instImageUid:
-#          fileSignatureJson = json.loads(artifact["FileSignatureJson"])
-#          signatureStatus = fileSignatureJson["SignatureStatus"]
-#          if signatureStatus == "IssuerSignatureMissing":
-#             cert_issue_devices.add((item["Device"]["Name"],item["Device"]["CylanceId"]))
-#             break;
-
-# with open(now.strftime('%Y%m%d%H%M%S')+'cert_issue_hosts.txt', 'w') as f:
-#    for val in cert_issue_devices:
-#       line = ','.join(str(x) for x in val)
-#       f.write(line + '\n')
-
-# for val in cert_issue_devices:
-#    print ("Applying new policy to device: " + val[0])
-#    deviceUpdated = Cylance.UpdateDevice(deviceName = val[0], deviceUID = val[1], policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
-#    if not deviceUpdated:
-#       print (val[0] + " not updated")
-
-# print(str(countErrors) + " Errors occured when invoking GetDetection()")
-
-
+print(str(countErrors) + " Errors occured when invoking GetDetection()")
 
    #Cylance.UpdateDevice(deviceName = "2126PC63383", deviceUID = "f188b93f-7b24-4e56-b069-59bc0d7642d3", policyId = "e8a7168a-f2d9-4507-873a-84c402265036")
 ####-----------------------------------------------------------------------------------------
